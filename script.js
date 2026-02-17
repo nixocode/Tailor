@@ -94,9 +94,9 @@
         let mouseX = -9999, mouseY = -9999;
 
         // Physics constants
-        const GRAVITY_STRENGTH = 0.012;
+        const HOME_STRENGTH = 0.005;
         const CURSOR_REPULSION = 8000;
-        const DAMPING = 0.92;
+        const DAMPING = 0.88;
         const BALL_COUNT = 280;
 
         // Color palette (Seeing Theory inspired)
@@ -179,9 +179,11 @@
             for (let i = 0; i < BALL_COUNT; i++) {
                 const angle = Math.random() * Math.PI * 2;
                 const dist = 50 + Math.random() * Math.min(width, height) * 0.35;
+                const x = centerX + Math.cos(angle) * dist;
+                const y = centerY + Math.sin(angle) * dist;
                 nodes.push({
-                    x: centerX + Math.cos(angle) * dist,
-                    y: centerY + Math.sin(angle) * dist,
+                    x, y,
+                    homeX: x, homeY: y,
                     vx: 0,
                     vy: 0,
                     r: 4 + Math.random() * 12,
@@ -212,11 +214,11 @@
             for (let i = 0; i < nodes.length; i++) {
                 const n = nodes[i];
 
-                // 1. Central gravity — pull toward center
-                const gdx = centerX - n.x;
-                const gdy = centerY - n.y;
-                n.vx += gdx * GRAVITY_STRENGTH;
-                n.vy += gdy * GRAVITY_STRENGTH;
+                // 1. Return to home position — gentle pull back to where it spawned
+                const gdx = n.homeX - n.x;
+                const gdy = n.homeY - n.y;
+                n.vx += gdx * HOME_STRENGTH;
+                n.vy += gdy * HOME_STRENGTH;
 
                 // 2. Cursor repulsion — strong push away from mouse
                 const cdx = n.x - mouseX;
