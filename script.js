@@ -93,6 +93,12 @@
         // Mouse state
         let mouseX = -9999, mouseY = -9999;
 
+        // Scroll dispersion state
+        let scrollProgress = 0;
+
+        // Click shockwave state
+        let shockwaves = [];
+
         // Physics constants
         const HOME_STRENGTH = 0.005;
         const CURSOR_REPULSION = 8000;
@@ -179,13 +185,15 @@
             for (let i = 0; i < BALL_COUNT; i++) {
                 const angle = Math.random() * Math.PI * 2;
                 const dist = 50 + Math.random() * Math.min(width, height) * 0.35;
-                const x = centerX + Math.cos(angle) * dist;
-                const y = centerY + Math.sin(angle) * dist;
+                const homeX = centerX + Math.cos(angle) * dist;
+                const homeY = centerY + Math.sin(angle) * dist;
                 nodes.push({
-                    x, y,
-                    homeX: x, homeY: y,
-                    vx: 0,
-                    vy: 0,
+                    // Start above viewport for rain-in effect
+                    x: Math.random() * width,
+                    y: -50 - Math.random() * height,
+                    homeX, homeY,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: Math.random() * 3,
                     r: 4 + Math.random() * 12,
                     color: COLORS[Math.floor(Math.random() * COLORS.length)],
                 });
@@ -211,6 +219,10 @@
             const qt = new QuadTree(0, 0, width, height);
             for (let i = 0; i < nodes.length; i++) qt.insert(nodes[i]);
 
+            // Update shockwaves (decay over time)
+            const now = performance.now();
+            shockwaves = shockwaves.filter(s => now - s.time < 400);
+
             for (let i = 0; i < nodes.length; i++) {
                 const n = nodes[i];
 
@@ -220,7 +232,17 @@
                 n.vx += gdx * HOME_STRENGTH;
                 n.vy += gdy * HOME_STRENGTH;
 
-                // 2. Cursor repulsion — strong push away from mouse
+                // 2. Scroll dispersion — push outward when scrolling past hero
+                if (scrollProgress > 0) {
+                    const sdx = n.x - centerX;
+                    const sdy = n.y - centerY;
+                    const sDist = Math.sqrt(sdx * sdx + sdy * sdy) || 1;
+                    const disperseForce = scrollProgress * 2.5;
+                    n.vx += (sdx / sDist) * disperseForce;
+                    n.vy += (sdy / sDist) * disperseForce;
+                }
+
+                // 3. Cursor repulsion — strong push away from mouse
                 const cdx = n.x - mouseX;
                 const cdy = n.y - mouseY;
                 const cDistSq = cdx * cdx + cdy * cdy;
@@ -231,7 +253,23 @@
                     n.vy += (cdy / cDist) * force;
                 }
 
-                // 3. Collision with other nearby balls
+                // 4. Click shockwave — radial burst from click point
+                for (let s = 0; s < shockwaves.length; s++) {
+                    const sw = shockwaves[s];
+                    const age = (now - sw.time) / 400; // 0 → 1
+                    const swdx = n.x - sw.x;
+                    const swdy = n.y - sw.y;
+                    const swDistSq = swdx * swdx + swdy * swdy;
+                    const swRadius = 300;
+                    if (swDistSq < swRadius * swRadius && swDistSq > 0) {
+                        const swDist = Math.sqrt(swDistSq);
+                        const swForce = (1 - age) * 15 * (1 - swDist / swRadius);
+                        n.vx += (swdx / swDist) * swForce;
+                        n.vy += (swdy / swDist) * swForce;
+                    }
+                }
+
+                // 5. Collision with other nearby balls
                 const nearby = [];
                 qt.retrieve(n, nearby);
                 for (let j = 0; j < nearby.length; j++) {
@@ -251,13 +289,13 @@
                     }
                 }
 
-                // 4. Apply velocity with damping
+                // 6. Apply velocity with damping
                 n.vx *= DAMPING;
                 n.vy *= DAMPING;
                 n.x += n.vx;
                 n.y += n.vy;
 
-                // 5. Keep balls in bounds (soft bounce)
+                // 7. Keep balls in bounds (soft bounce)
                 const margin = n.r;
                 if (n.x < margin) { n.x = margin; n.vx *= -0.5; }
                 if (n.x > width - margin) { n.x = width - margin; n.vx *= -0.5; }
@@ -279,12 +317,28 @@
             ctx.fillStyle = '#111111';
             ctx.fillRect(0, 0, width, height);
 
-            // Draw balls with transparency
-            ctx.globalAlpha = 0.6;
+            // Scroll-based fade
+            const baseAlpha = Math.max(0, 0.6 * (1 - scrollProgress));
+
+            // Draw balls with glow effect near cursor
             for (let i = 0; i < nodes.length; i++) {
                 const n = nodes[i];
+
+                // Distance to cursor for glow effect
+                const gdx = n.x - mouseX;
+                const gdy = n.y - mouseY;
+                const gDist = Math.sqrt(gdx * gdx + gdy * gdy);
+                const glowRange = 150;
+                const glowFactor = gDist < glowRange ? 1 - gDist / glowRange : 0;
+
+                // Alpha: base + very subtle glow boost near cursor
+                ctx.globalAlpha = Math.min(1, baseAlpha + glowFactor * 0.08);
+
+                // Size: barely larger near cursor
+                const drawR = n.r * (1 + glowFactor * 0.05);
+
                 ctx.beginPath();
-                ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+                ctx.arc(n.x, n.y, drawR, 0, Math.PI * 2);
                 ctx.fillStyle = n.color;
                 ctx.fill();
             }
@@ -305,8 +359,30 @@
             mouseY = -9999;
         }, { passive: true });
 
-        // Touch support — finger acts as cursor
+        // Click shockwave
         const heroSection = document.getElementById('hero');
+        if (heroSection) {
+            heroSection.addEventListener('click', (e) => {
+                shockwaves.push({ x: e.clientX, y: e.clientY, time: performance.now() });
+            });
+            heroSection.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    shockwaves.push({ x: e.touches[0].clientX, y: e.touches[0].clientY, time: performance.now() });
+                }
+            }, { passive: true });
+        }
+
+        // Scroll dispersion tracking
+        window.addEventListener('scroll', () => {
+            const heroEl = document.getElementById('hero');
+            if (!heroEl) return;
+            const rect = heroEl.getBoundingClientRect();
+            const heroH = rect.height;
+            // scrollProgress: 0 = hero fully in view, 1 = hero scrolled away
+            scrollProgress = clamp(-rect.top / (heroH * 0.6), 0, 1);
+        }, { passive: true });
+
+        // Touch support — finger acts as cursor
         if (heroSection) {
             heroSection.addEventListener('touchmove', (e) => {
                 mouseX = e.touches[0].clientX;
@@ -477,6 +553,36 @@
     };
 
     // ============================================
+    // CURSOR GLOW TRAIL
+    // ============================================
+
+    const initCursorGlow = () => {
+        const glow = document.getElementById('cursor-glow');
+        if (!glow || prefersReducedMotion || window.innerWidth < 768) return;
+
+        let glowX = 0, glowY = 0;
+        let targetX = 0, targetY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            targetX = e.clientX;
+            targetY = e.clientY;
+            glow.classList.add('visible');
+        }, { passive: true });
+
+        document.addEventListener('mouseleave', () => {
+            glow.classList.remove('visible');
+        }, { passive: true });
+
+        const updateGlow = () => {
+            glowX += (targetX - glowX) * 0.15;
+            glowY += (targetY - glowY) * 0.15;
+            glow.style.transform = `translate(${glowX - 150}px, ${glowY - 150}px)`;
+            requestAnimationFrame(updateGlow);
+        };
+        requestAnimationFrame(updateGlow);
+    };
+
+    // ============================================
     // INITIALIZE
     // ============================================
 
@@ -487,6 +593,7 @@
         initSmoothScroll();
         initForm();
         initAccessibility();
+        initCursorGlow();
     });
 
 })();

@@ -13,6 +13,11 @@
     <meta property="og:description"
         content="Custom websites built by AI, refined by humans. Premium web design from €200.">
     <meta property="og:type" content="website">
+    <meta property="og:url" content="https://nixocode.github.io/Tailor/">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Tailor — Websites. Tailored.">
+    <meta name="twitter:description"
+        content="Custom websites built by AI, refined by humans. Premium web design from €200.">
 
     <!-- Security headers -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
@@ -23,6 +28,10 @@
 
     <title>Tailor — Websites. Tailored.</title>
 
+    <!-- Favicon -->
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23111'/><text x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-family='Inter,sans-serif' font-weight='700' font-size='20' fill='white'>T</text></svg>">
+
     <!-- Preconnect -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,6 +41,7 @@
 </head>
 
 <body>
+    <div class="cursor-glow" id="cursor-glow" aria-hidden="true"></div>
     <a href="#main" class="skip-link">Skip to main content</a>
 
     <!-- Navigation -->
@@ -39,6 +49,7 @@
         <div class="nav-container">
             <a href="#" class="nav-logo" aria-label="Tailor - Home">Tailor</a>
             <div class="nav-links">
+                <a href="portfolio.html">Portfolio</a>
                 <a href="maintenance.html">Maintenance</a>
                 <a href="#faq">FAQ</a>
                 <a href="#contact" class="nav-cta">Get Started</a>
@@ -89,6 +100,74 @@
             </div>
         </section>
 
+        <!-- Section Divider -->
+        <div class="section-divider" aria-hidden="true"></div>
+
+        <!-- Pricing -->
+        <section class="section" id="pricing" aria-labelledby="pricing-title">
+            <div class="container">
+                <header class="section-header">
+                    <span class="section-label reveal">Pricing</span>
+                    <h2 class="section-title reveal" id="pricing-title">Simple, transparent pricing.</h2>
+                </header>
+                <div class="pricing-grid">
+                    <div class="pricing-card reveal">
+                        <span class="pricing-label">Starter</span>
+                        <div class="pricing-price">€200</div>
+                        <p class="pricing-desc">Perfect for personal sites and landing pages.</p>
+                        <ul class="pricing-features">
+                            <li>Single-page website</li>
+                            <li>Mobile responsive</li>
+                            <li>1 revision round</li>
+                            <li>3-day delivery</li>
+                            <li>1 year hosting included</li>
+                        </ul>
+                        <a href="#contact" class="btn btn-secondary">Get Started</a>
+                    </div>
+                    <div class="pricing-card pricing-card--featured reveal">
+                        <span class="pricing-badge">Most Popular</span>
+                        <span class="pricing-label">Professional</span>
+                        <div class="pricing-price">€500</div>
+                        <p class="pricing-desc">For businesses that need a full online presence.</p>
+                        <ul class="pricing-features">
+                            <li>Multi-page website (up to 5)</li>
+                            <li>Mobile responsive</li>
+                            <li>SEO optimization</li>
+                            <li>3 revision rounds</li>
+                            <li>5-day delivery</li>
+                            <li>1 year hosting included</li>
+                            <li>Contact form setup</li>
+                        </ul>
+                        <a href="#contact" class="btn btn-primary">Get Started
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" aria-hidden="true">
+                                <path d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                    </div>
+                    <div class="pricing-card reveal">
+                        <span class="pricing-label">Premium</span>
+                        <div class="pricing-price">€1000<span class="pricing-plus">+</span></div>
+                        <p class="pricing-desc">Custom design with unlimited refinements.</p>
+                        <ul class="pricing-features">
+                            <li>Fully custom design</li>
+                            <li>Unlimited pages</li>
+                            <li>Advanced SEO</li>
+                            <li>Unlimited revisions</li>
+                            <li>Priority support</li>
+                            <li>1 year hosting included</li>
+                            <li>Performance optimization</li>
+                            <li>Analytics setup</li>
+                        </ul>
+                        <a href="#contact" class="btn btn-secondary">Get Started</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section Divider -->
+        <div class="section-divider" aria-hidden="true"></div>
+
         <!-- FAQ -->
         <section class="section" id="faq" aria-labelledby="faq-title">
             <div class="container">
@@ -126,6 +205,48 @@
                         <h3>Is SEO included?</h3>
                         <p>All sites are built with SEO best practices. Professional and Premium plans include dedicated
                             optimization.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section Divider -->
+        <div class="section-divider" aria-hidden="true"></div>
+
+        <!-- Testimonials -->
+        <section class="section" id="testimonials" aria-labelledby="testimonials-title">
+            <div class="container">
+                <header class="section-header">
+                    <span class="section-label reveal">Testimonials</span>
+                    <h2 class="section-title reveal" id="testimonials-title">What our clients say.</h2>
+                </header>
+                <div class="testimonials-grid">
+                    <div class="testimonial-card reveal">
+                        <div class="testimonial-stars">★★★★★</div>
+                        <p class="testimonial-quote">"They delivered our restaurant website in just 4 days. The design
+                            is stunning and we've seen a 40% increase in online reservations."</p>
+                        <div class="testimonial-author">
+                            <span class="testimonial-name">Maria R.</span>
+                            <span class="testimonial-role">Restaurant Owner</span>
+                        </div>
+                    </div>
+                    <div class="testimonial-card reveal">
+                        <div class="testimonial-stars">★★★★★</div>
+                        <p class="testimonial-quote">"Professional, fast, and the result exceeded expectations. Our new
+                            site converts 3x better than the old one."</p>
+                        <div class="testimonial-author">
+                            <span class="testimonial-name">Thomas K.</span>
+                            <span class="testimonial-role">Consulting Firm</span>
+                        </div>
+                    </div>
+                    <div class="testimonial-card reveal">
+                        <div class="testimonial-stars">★★★★★</div>
+                        <p class="testimonial-quote">"Best investment for my small business. The maintenance plan means
+                            I never have to worry about updates or security."</p>
+                        <div class="testimonial-author">
+                            <span class="testimonial-name">Sophie L.</span>
+                            <span class="testimonial-role">Wellness Studio</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -205,6 +326,7 @@
                     <p>Websites. Tailored.</p>
                 </div>
                 <nav class="footer-links" aria-label="Footer navigation">
+                    <a href="portfolio.html">Portfolio</a>
                     <a href="maintenance.html">Maintenance</a>
                     <a href="#faq">FAQ</a>
                     <a href="#contact">Contact</a>
