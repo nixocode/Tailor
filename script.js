@@ -89,6 +89,9 @@
         let width, height, centerX, centerY;
         let animationId;
         let isVisible = true;
+        let lastTime = 0;
+        let lastWidth = 0;
+        let initialized = false;
 
         // Mouse state
         let mouseX = -9999, mouseY = -9999;
@@ -103,7 +106,7 @@
         const HOME_STRENGTH = 0.005;
         const CURSOR_REPULSION = 8000;
         const DAMPING = 0.88;
-        const BALL_COUNT = 280;
+        const TARGET_DT = 1000 / 60;
 
         // Color palette (Seeing Theory inspired)
         const COLORS = [
@@ -115,8 +118,21 @@
             '#fc4d77', // pink
         ];
 
-        // Ball nodes
         let nodes = [];
+
+        const getBallCount = () => {
+            const w = window.innerWidth;
+            if (w < 480) return 80;
+            if (w < 768) return 140;
+            return 280;
+        };
+
+        const getBallRadius = () => {
+            const w = window.innerWidth;
+            if (w < 480) return [3, 7];
+            if (w < 768) return [3, 9];
+            return [4, 12];
+        };
 
         // ---- Quadtree for collision detection ----
         class QuadTree {
@@ -182,19 +198,22 @@
 
         const generateNodes = () => {
             nodes = [];
-            for (let i = 0; i < BALL_COUNT; i++) {
+            const count = getBallCount();
+            const [minR, maxR] = getBallRadius();
+            for (let i = 0; i < count; i++) {
                 const angle = Math.random() * Math.PI * 2;
                 const dist = 50 + Math.random() * Math.min(width, height) * 0.35;
                 const homeX = centerX + Math.cos(angle) * dist;
                 const homeY = centerY + Math.sin(angle) * dist;
                 nodes.push({
-                    // Start above viewport for rain-in effect
                     x: Math.random() * width,
-                    y: -50 - Math.random() * height,
+                    y: -50 - Math.random() * height * 0.5,
                     homeX, homeY,
+                    homeNormX: homeX / width,
+                    homeNormY: homeY / height,
                     vx: (Math.random() - 0.5) * 2,
                     vy: Math.random() * 3,
-                    r: 4 + Math.random() * 12,
+                    r: minR + Math.random() * (maxR - minR),
                     color: COLORS[Math.floor(Math.random() * COLORS.length)],
                 });
             }
@@ -202,8 +221,11 @@
 
         const resize = () => {
             const dpr = Math.min(window.devicePixelRatio, 2);
-            width = window.innerWidth;
-            height = window.innerHeight;
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight;
+
+            width = newWidth;
+            height = newHeight;
             centerX = width / 2;
             centerY = height / 2;
             canvas.width = width * dpr;
@@ -211,10 +233,53 @@
             canvas.style.width = width + 'px';
             canvas.style.height = height + 'px';
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            generateNodes();
+
+            if (!initialized) {
+                generateNodes();
+                initialized = true;
+                lastWidth = newWidth;
+                return;
+            }
+
+            if (Math.abs(newWidth - lastWidth) > 50) {
+                lastWidth = newWidth;
+                const newCount = getBallCount();
+                const [minR, maxR] = getBallRadius();
+
+                if (newCount !== nodes.length) {
+                    nodes = [];
+                    for (let i = 0; i < newCount; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const dist = 50 + Math.random() * Math.min(width, height) * 0.35;
+                        const homeX = centerX + Math.cos(angle) * dist;
+                        const homeY = centerY + Math.sin(angle) * dist;
+                        nodes.push({
+                            x: homeX, y: homeY,
+                            homeX, homeY,
+                            homeNormX: homeX / width,
+                            homeNormY: homeY / height,
+                            vx: 0, vy: 0,
+                            r: minR + Math.random() * (maxR - minR),
+                            color: COLORS[Math.floor(Math.random() * COLORS.length)],
+                        });
+                    }
+                } else {
+                    for (const n of nodes) {
+                        n.homeX = n.homeNormX * width;
+                        n.homeY = n.homeNormY * height;
+                        n.x = clamp(n.x, n.r, width - n.r);
+                        n.y = clamp(n.y, n.r, height - n.r);
+                    }
+                }
+            } else {
+                for (const n of nodes) {
+                    n.homeX = n.homeNormX * width;
+                    n.homeY = n.homeNormY * height;
+                }
+            }
         };
 
-        const simulate = () => {
+        const simulate = (dt) => {
             // Build quadtree for collisions
             const qt = new QuadTree(0, 0, width, height);
             for (let i = 0; i < nodes.length; i++) qt.insert(nodes[i]);
@@ -222,6 +287,7 @@
             // Update shockwaves (decay over time)
             const now = performance.now();
             shockwaves = shockwaves.filter(s => now - s.time < 400);
+            const dampingDt = Math.pow(DAMPING, dt);
 
             for (let i = 0; i < nodes.length; i++) {
                 const n = nodes[i];
@@ -229,15 +295,15 @@
                 // 1. Return to home position — gentle pull back to where it spawned
                 const gdx = n.homeX - n.x;
                 const gdy = n.homeY - n.y;
-                n.vx += gdx * HOME_STRENGTH;
-                n.vy += gdy * HOME_STRENGTH;
+                n.vx += gdx * HOME_STRENGTH * dt;
+                n.vy += gdy * HOME_STRENGTH * dt;
 
                 // 2. Scroll dispersion — push outward when scrolling past hero
                 if (scrollProgress > 0) {
                     const sdx = n.x - centerX;
                     const sdy = n.y - centerY;
                     const sDist = Math.sqrt(sdx * sdx + sdy * sdy) || 1;
-                    const disperseForce = scrollProgress * 2.5;
+                    const disperseForce = scrollProgress * 2.5 * dt;
                     n.vx += (sdx / sDist) * disperseForce;
                     n.vy += (sdy / sDist) * disperseForce;
                 }
@@ -248,7 +314,7 @@
                 const cDistSq = cdx * cdx + cdy * cdy;
                 if (cDistSq > 0 && cDistSq < 200 * 200) {
                     const cDist = Math.sqrt(cDistSq);
-                    const force = CURSOR_REPULSION / cDistSq;
+                    const force = CURSOR_REPULSION / cDistSq * dt;
                     n.vx += (cdx / cDist) * force;
                     n.vy += (cdy / cDist) * force;
                 }
@@ -263,7 +329,7 @@
                     const swRadius = 300;
                     if (swDistSq < swRadius * swRadius && swDistSq > 0) {
                         const swDist = Math.sqrt(swDistSq);
-                        const swForce = (1 - age) * 15 * (1 - swDist / swRadius);
+                        const swForce = (1 - age) * 15 * (1 - swDist / swRadius) * dt;
                         n.vx += (swdx / swDist) * swForce;
                         n.vy += (swdy / swDist) * swForce;
                     }
@@ -290,10 +356,10 @@
                 }
 
                 // 6. Apply velocity with damping
-                n.vx *= DAMPING;
-                n.vy *= DAMPING;
-                n.x += n.vx;
-                n.y += n.vy;
+                n.vx *= dampingDt;
+                n.vy *= dampingDt;
+                n.x += n.vx * dt;
+                n.y += n.vy * dt;
 
                 // 7. Keep balls in bounds (soft bounce)
                 const margin = n.r;
@@ -304,14 +370,18 @@
             }
         };
 
-        const draw = () => {
+        const draw = (timestamp) => {
             if (!isVisible) {
+                lastTime = timestamp;
                 animationId = requestAnimationFrame(draw);
                 return;
             }
 
-            // Physics step
-            simulate();
+            const rawDt = lastTime ? (timestamp - lastTime) / TARGET_DT : 1;
+            const dt = Math.min(rawDt, 3);
+            lastTime = timestamp;
+
+            simulate(dt);
 
             // Clear
             ctx.fillStyle = '#111111';

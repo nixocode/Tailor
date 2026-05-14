@@ -546,6 +546,11 @@ a {
     transform: translate(2px, -2px);
 }
 
+.portfolio-link-text--muted {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
 @media (max-width: 768px) {
     .portfolio-grid {
         grid-template-columns: 1fr;
